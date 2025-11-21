@@ -29,13 +29,14 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
+    GroupAction,
 )
 from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace
 
 from nav2_common.launch import ReplaceString
 
@@ -78,31 +79,7 @@ def launch_setup(context, *args, **kwargs):
         },
     )
 
-    # Robot State Publisher
-    robot_state_publisher = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        output="screen",
-        parameters=[{"robot_description": doc.toxml()}],
-        namespace=LaunchConfiguration("namespace"),
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
-        condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
-    )
-
-    # Controller Manager
-    controller_manager = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        namespace=LaunchConfiguration("namespace"),
-        parameters=[{"update_rate": 1000}],
-        output={
-            "stdout": "screen",
-            "stderr": "screen",
-        },
-        condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
-    )
-
-    # Ros2 Controllers
+    # Configure controller parameters
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     if tf_prefix != "":
         prefix = tf_prefix + "/"
@@ -113,43 +90,65 @@ def launch_setup(context, *args, **kwargs):
 
     srdf_str = srdf_doc.toxml().replace("\n", "\\n").replace('"', '\\"')
     controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("controllers_config"),
+        source_file=LaunchConfiguration("ros2_control_params_arm"),
         replacements={
             "<prefix>": prefix,
             "<suffix>": suffix,
             "<srdf>": f'"{srdf_str}"',
         },
     )
-    start_controllers = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([pkg_duatic_control, "launch", "control.launch.py"])
-        ),
-        launch_arguments={
-            "namespace": LaunchConfiguration("namespace"),
-            "config_path": controllers_params,
-        }.items(),
+
+    # Conditional Namespace Push
+    optional_namespace = []
+    if LaunchConfiguration("start_as_subcomponent").perform(context) == "false":
+        optional_namespace.append(PushRosNamespace(LaunchConfiguration("namespace")))
+
+    group_action = GroupAction(
+        actions=optional_namespace
+        + [
+            # Robot State Publisher
+            Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                output="screen",
+                parameters=[{"robot_description": doc.toxml()}],
+                remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+            # Controller Manager
+            Node(
+                package="controller_manager",
+                executable="ros2_control_node",
+                parameters=[{"update_rate": 1000}],
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+            # Start Controllers
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([pkg_duatic_control, "launch", "control.launch.py"])
+                ),
+                launch_arguments={
+                    "namespace": LaunchConfiguration("namespace"),
+                    "config_path": controllers_params,
+                }.items(),
+            ),
+            # Emergency Stop
+            Node(
+                package="dynaarm_extensions",
+                executable="e_stop_node",
+                name="e_stop_node",
+                output="screen",
+                parameters=[{"emergency_stop_button": 9}],  # Change button index here
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+        ]
     )
 
-    # Emergency Stop
-    e_stop_node = Node(
-        package="dynaarm_extensions",
-        executable="e_stop_node",
-        namespace=LaunchConfiguration("namespace"),
-        name="e_stop_node",
-        output="screen",
-        parameters=[{"emergency_stop_button": 9}],  # Change button index here
-        condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
-    )
-
-    # Collect nodes to start
-    nodes_to_start = [
-        start_controllers,
-        robot_state_publisher,
-        controller_manager,
-        e_stop_node,
-    ]
-
-    return nodes_to_start
+    return [group_action]
 
 
 def generate_launch_description():
@@ -183,7 +182,7 @@ def generate_launch_description():
             description="Start RViz2 automatically with this launch file.",
         ),
         DeclareLaunchArgument(
-            "controllers_config",
+            "ros2_control_params_arm",
             default_value=get_package_share_directory("dynaarm_bringup")
             + "/config/controllers.yaml",
             description="Path to the controllers config file",

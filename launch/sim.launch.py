@@ -28,13 +28,14 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
+    GroupAction,
 )
 from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace, SetParameter
 
 from nav2_common.launch import ReplaceString
 
@@ -58,33 +59,7 @@ def launch_setup(context, *args, **kwargs):
         },
     )
 
-    # Robot State Publisher
-    robot_state_publisher = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        output="screen",
-        parameters=[{"robot_description": doc.toxml()}],
-        namespace=LaunchConfiguration("namespace"),
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
-        condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
-    )
-
-    # Spawn in Simulation
-    spawn = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([pkg_duatic_simulation, "launch", "spawn.launch.py"])
-        ),
-        launch_arguments={
-            "namespace": LaunchConfiguration("namespace"),
-            "x": LaunchConfiguration("initial_pose_x"),
-            "y": LaunchConfiguration("initial_pose_y"),
-            "z": LaunchConfiguration("initial_pose_z"),
-            "yaw": LaunchConfiguration("initial_pose_yaw"),
-        }.items(),
-        condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
-    )
-
-    # Ros2 Control
+    # Process ros2_control_params file
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     if tf_prefix != "":
         prefix = tf_prefix + "/"
@@ -94,27 +69,57 @@ def launch_setup(context, *args, **kwargs):
         suffix = ""
 
     controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("controllers_config"),
+        source_file=LaunchConfiguration("ros2_control_params_arm"),
         replacements={"<prefix>": prefix, "<suffix>": suffix},
     )
-    start_controllers = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([pkg_duatic_control, "launch", "control.launch.py"])
-        ),
-        launch_arguments={
-            "namespace": LaunchConfiguration("namespace"),
-            "config_path": controllers_params,
-        }.items(),
+
+    print(f"Using controllers config file: {controllers_params.perform(context)}")
+    # Conditional Namespace Push
+    optional_namespace = []
+    if LaunchConfiguration("start_as_subcomponent").perform(context) == "false":
+        optional_namespace.append(PushRosNamespace(LaunchConfiguration("namespace")))
+
+    group_action = GroupAction(
+        actions=optional_namespace
+        + [
+            SetParameter(name="use_sim_time", value=True),
+            # Robot State Publisher
+            Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                output="screen",
+                parameters=[{"robot_description": doc.toxml()}],
+                remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+            # Spawn in Simulation
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([pkg_duatic_simulation, "launch", "spawn.launch.py"])
+                ),
+                launch_arguments={
+                    "namespace": LaunchConfiguration("namespace"),
+                    "x": LaunchConfiguration("initial_pose_x"),
+                    "y": LaunchConfiguration("initial_pose_y"),
+                    "z": LaunchConfiguration("initial_pose_z"),
+                    "yaw": LaunchConfiguration("initial_pose_yaw"),
+                }.items(),
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+            # Start Controllers
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([pkg_duatic_control, "launch", "control.launch.py"])
+                ),
+                launch_arguments={
+                    "namespace": LaunchConfiguration("namespace"),
+                    "config_path": controllers_params,
+                }.items(),
+            ),
+        ]
     )
 
-    # Collect nodes to start
-    nodes_to_start = [
-        start_controllers,
-        robot_state_publisher,
-        spawn,
-    ]
-
-    return nodes_to_start
+    return [group_action]
 
 
 def generate_launch_description():
@@ -152,7 +157,7 @@ def generate_launch_description():
             description="Path to the ros_gz_bridge config file",
         ),
         DeclareLaunchArgument(
-            "controllers_config",
+            "ros2_control_params_arm",
             default_value=get_package_share_directory("dynaarm_bringup")
             + "/config/controllers_sim.yaml",
             description="Path to the controllers config file",
