@@ -73,15 +73,14 @@ def launch_setup(context, *args, **kwargs):
         replacements={"<prefix>": prefix, "<suffix>": suffix},
     )
 
-    print(f"Using controllers config file: {controllers_params.perform(context)}")
-    # Conditional Namespace Push
-    optional_namespace = []
-    if LaunchConfiguration("start_as_subcomponent").perform(context) == "false":
-        optional_namespace.append(PushRosNamespace(LaunchConfiguration("namespace")))
-
     group_action = GroupAction(
-        actions=optional_namespace
-        + [
+        actions=[
+            # Push Namespace, if the component is started as a standalone component
+            PushRosNamespace(
+                LaunchConfiguration("namespace"),
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
+            # Set use_sim_time parameter
             SetParameter(name="use_sim_time", value=True),
             # Robot State Publisher
             Node(

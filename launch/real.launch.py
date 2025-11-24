@@ -98,14 +98,13 @@ def launch_setup(context, *args, **kwargs):
         },
     )
 
-    # Conditional Namespace Push
-    optional_namespace = []
-    if LaunchConfiguration("start_as_subcomponent").perform(context) == "false":
-        optional_namespace.append(PushRosNamespace(LaunchConfiguration("namespace")))
-
     group_action = GroupAction(
-        actions=optional_namespace
-        + [
+        actions=[
+            # Push Namespace, if the component is started as a standalone component
+            PushRosNamespace(
+                LaunchConfiguration("namespace"),
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
             # Robot State Publisher
             Node(
                 package="robot_state_publisher",
