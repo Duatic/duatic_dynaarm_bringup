@@ -116,6 +116,15 @@ def launch_setup(context, *args, **kwargs):
                     "config_path": controllers_params,
                 }.items(),
             ),
+            # Emergency Stop
+            Node(
+                package="dynaarm_extensions",
+                executable="e_stop_node",
+                name="e_stop_node",
+                output="screen",
+                parameters=[{"emergency_stop_button": 9}],  # Change button index here
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
+            ),
         ]
     )
 
@@ -142,10 +151,7 @@ def generate_launch_description():
             choices=["arowana4", "baracuda12"],
             description="Select the desired version of robot ",
         ),
-        DeclareLaunchArgument(
-            name="namespace",
-            default_value="",
-        ),
+        DeclareLaunchArgument(name="namespace", default_value=""),
         DeclareLaunchArgument(
             name="urdf_file",
             default_value=get_package_share_directory("dynaarm_description")
