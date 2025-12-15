@@ -22,7 +22,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import xacro
-from ament_index_python import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -68,7 +68,7 @@ def launch_setup(context, *args, **kwargs):
             "dof": LaunchConfiguration("dof").perform(context),
             "covers": LaunchConfiguration("covers").perform(context),
             "version": LaunchConfiguration("version").perform(context),
-            "mode": "mock",
+            "mode": "real",
         },
     )
 
@@ -168,16 +168,12 @@ def generate_launch_description():
             choices=["arowana4", "baracuda12"],
             description="Select the desired version of robot ",
         ),
-        DeclareLaunchArgument(name="namespace", default_value=""),
+        DeclareLaunchArgument(name="namespace", default_value="", description="Robot namespace"),
         DeclareLaunchArgument(
             name="urdf_file_path",
             default_value=get_package_share_directory("dynaarm_description")
             + "/urdf/dynaarm_standalone.urdf.xacro",
-        ),
-        DeclareLaunchArgument(
-            "gui",
-            default_value="True",
-            description="Start RViz2 automatically with this launch file.",
+            description="Path to the robot URDF file",
         ),
         DeclareLaunchArgument(
             "ros2_control_params_arm",
@@ -188,7 +184,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "start_as_subcomponent",
             default_value="false",
-            description="Whether the platform is started as a subcomponent",
+            description="Whether the dynaarm is started as a subcomponent",
         ),
         DeclareLaunchArgument("tf_prefix", default_value="", description="Arm identifier"),
         DeclareLaunchArgument(
