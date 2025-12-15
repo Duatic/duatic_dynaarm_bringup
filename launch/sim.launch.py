@@ -46,7 +46,7 @@ def launch_setup(context, *args, **kwargs):
     pkg_duatic_simulation = FindPackageShare("duatic_simulation")
 
     # Process URDF file
-    doc = xacro.parse(open(LaunchConfiguration("urdf_file").perform(context)))
+    doc = xacro.parse(open(LaunchConfiguration("urdf_file_path").perform(context)))
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     xacro.process_doc(
         doc,
@@ -153,7 +153,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(name="namespace", default_value=""),
         DeclareLaunchArgument(
-            name="urdf_file",
+            name="urdf_file_path",
             default_value=get_package_share_directory("dynaarm_description")
             + "/urdf/dynaarm_standalone.urdf.xacro",
         ),
