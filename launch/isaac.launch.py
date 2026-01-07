@@ -190,7 +190,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "controllers_config",
             default_value=get_package_share_directory("dynaarm_bringup")
-            + "/config/controllers.yaml",
+            + "/config/controllers_sim.yaml",
             description="Path to the controllers config file",
         ),
         DeclareLaunchArgument(
