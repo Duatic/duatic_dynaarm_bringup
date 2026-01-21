@@ -1,4 +1,4 @@
-# Copyright 2025 Duatic AG
+# Copyright 2026 Duatic AG
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that
 # the following conditions are met:
@@ -39,6 +39,8 @@ from launch_ros.actions import Node, PushRosNamespace, SetParameter
 
 from nav2_common.launch import ReplaceString
 
+from duatic_helpers import simulator_not_subcomponent_condition
+
 
 def launch_setup(context, *args, **kwargs):
     # Package Directories
@@ -65,14 +67,14 @@ def launch_setup(context, *args, **kwargs):
             "dof": LaunchConfiguration("dof").perform(context),
             "covers": LaunchConfiguration("covers").perform(context),
             "version": LaunchConfiguration("version").perform(context),
-            "tf_prefix": tf_prefix + "_" if tf_prefix else "",
+            "tf_prefix": tf_prefix + "/" if tf_prefix else "",
         },
     )
 
     # Process ros2_control_params file
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     if tf_prefix != "":
-        prefix = tf_prefix + "_"
+        prefix = tf_prefix + "/"
         suffix = "_" + tf_prefix
     else:
         prefix = ""
@@ -113,18 +115,8 @@ def launch_setup(context, *args, **kwargs):
                     "z": LaunchConfiguration("initial_pose_z"),
                     "yaw": LaunchConfiguration("initial_pose_yaw"),
                 }.items(),
-                condition=IfCondition(
-                    PythonExpression(
-                        [
-                            "'",
-                            LaunchConfiguration("start_as_subcomponent"),
-                            "' != 'true'",
-                            " and '",
-                            LaunchConfiguration("simulator"),
-                            "' == 'gazebo'",
-                        ]
-                    )
-                ),
+                # Only spawn if not started as subcomponent and using Gazebo
+                condition=simulator_not_subcomponent_condition("gazebo"),
             ),
             # Controller Manager
             Node(
@@ -135,18 +127,8 @@ def launch_setup(context, *args, **kwargs):
                     "stdout": "screen",
                     "stderr": "screen",
                 },
-                condition=IfCondition(
-                    PythonExpression(
-                        [
-                            "'",
-                            LaunchConfiguration("start_as_subcomponent"),
-                            "'.lower() != 'true'",
-                            " and '",
-                            LaunchConfiguration("simulator"),
-                            "' == 'isaac'",
-                        ]
-                    )
-                ),
+                # Only launch if not started as subcomponent and using Isaac Sim
+                condition=simulator_not_subcomponent_condition("isaac")
             ),
             # Start Controllers
             IncludeLaunchDescription(
