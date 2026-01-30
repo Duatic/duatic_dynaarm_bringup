@@ -45,7 +45,7 @@ from duatic_helpers import simulator_not_subcomponent_condition
 def launch_setup(context, *args, **kwargs):
     # Package Directories
     pkg_duatic_control = FindPackageShare("duatic_control")
-    pkg_duatic_simulation = FindPackageShare("duatic_simulation")
+    pkg_duatic_gazebo = FindPackageShare("duatic_gazebo")
 
     simulator = LaunchConfiguration("simulator").perform(context)
 
@@ -106,7 +106,7 @@ def launch_setup(context, *args, **kwargs):
             # Spawn in Simulation
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    PathJoinSubstitution([pkg_duatic_simulation, "launch", "spawn.launch.py"])
+                    PathJoinSubstitution([pkg_duatic_gazebo, "launch", "spawn.launch.py"])
                 ),
                 launch_arguments={
                     "namespace": LaunchConfiguration("namespace"),
