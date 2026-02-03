@@ -30,6 +30,12 @@
         type: duatic_dynaarm_controllers/CartesianPoseController
         state: inactive
 
+      force_torque_broadcaster:
+        type: duatic_dynaarm_controllers/ForceTorqueBroadcaster
+        state: active
+
+
+
 /**/joint_state_broadcaster<suffix>:
   ros__parameters:
     use_urdf_to_filter: false
@@ -119,3 +125,14 @@
       - velocity
     end_effector_frame: <prefix>flange
     srdf: <srdf>
+
+/**/force_torque_broadcaster:
+  ros__parameters:
+    joints:
+      - <prefix>shoulder_rotation
+      - <prefix>shoulder_flexion
+      - <prefix>elbow_flexion
+      - <prefix>forearm_rotation
+      - <prefix>wrist_flexion
+      - <prefix>wrist_rotation
+    endeffector_frame: <prefix>flange
