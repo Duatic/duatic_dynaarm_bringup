@@ -37,7 +37,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node, PushRosNamespace, SetParameter
 
-from nav2_common.launch import ReplaceString
+from duatic_common.launch import ReplaceString
 
 from duatic_helpers import simulator_not_subcomponent_condition
 
