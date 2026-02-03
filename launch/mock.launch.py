@@ -37,7 +37,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node, PushRosNamespace
 
-from nav2_common.launch import ReplaceString
+from duatic_common.launch import ReplaceString
 
 
 def launch_setup(context, *args, **kwargs):
