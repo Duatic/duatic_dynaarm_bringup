@@ -174,8 +174,6 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "ros2_control_params_arm",
-            default_value=get_package_share_directory("duatic_dynaarm_bringup")
-            + "/config/controllers.yaml",
             description="Path to the controllers config file",
         ),
         DeclareLaunchArgument(
