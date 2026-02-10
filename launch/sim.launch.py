@@ -21,7 +21,6 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from ament_index_python.packages import get_package_share_directory
 import xacro
 from launch import LaunchDescription
 from launch.actions import (
@@ -81,7 +80,7 @@ def launch_setup(context, *args, **kwargs):
         suffix = ""
 
     controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("ros2_control_params_arm"),
+        source_file=LaunchConfiguration("ros2_control_params"),
         replacements={"<prefix>": prefix, "<suffix>": suffix},
     )
 
@@ -139,6 +138,7 @@ def launch_setup(context, *args, **kwargs):
                     "namespace": LaunchConfiguration("namespace"),
                     "config_path": controllers_params,
                 }.items(),
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
             ),
             # Emergency Stop
             Node(
@@ -181,9 +181,8 @@ def generate_launch_description():
             description="Path to the robot URDF file",
         ),
         DeclareLaunchArgument(
-            "ros2_control_params_arm",
-            default_value=get_package_share_directory("duatic_dynaarm_bringup")
-            + "/config/controllers_sim.yaml",
+            "ros2_control_params",
+            default_value="",
             description="Path to the controllers config file",
         ),
         DeclareLaunchArgument(
