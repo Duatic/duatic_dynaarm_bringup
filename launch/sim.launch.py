@@ -70,7 +70,7 @@ def launch_setup(context, *args, **kwargs):
         },
     )
 
-    # Process ros2_control_params file
+    # Process controllers_config file
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     if tf_prefix != "":
         prefix = tf_prefix + "/"
@@ -80,7 +80,7 @@ def launch_setup(context, *args, **kwargs):
         suffix = ""
 
     controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("ros2_control_params"),
+        source_file=LaunchConfiguration("controllers_config"),
         replacements={"<prefix>": prefix, "<suffix>": suffix},
     )
 
@@ -181,7 +181,7 @@ def generate_launch_description():
             description="Path to the robot URDF file",
         ),
         DeclareLaunchArgument(
-            "ros2_control_params",
+            "controllers_config",
             default_value="",
             description="Path to the controllers config file",
         ),
