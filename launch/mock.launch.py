@@ -71,7 +71,7 @@ def launch_setup(context, *args, **kwargs):
         },
     )
 
-    # Process ros2_control_params file
+    # Process controllers_config file
     tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
     if tf_prefix != "":
         prefix = tf_prefix + "/"
@@ -82,7 +82,7 @@ def launch_setup(context, *args, **kwargs):
 
     srdf_str = srdf_doc.toxml().replace("\n", "\\n").replace('"', '\\"')
     controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("ros2_control_params_arm"),
+        source_file=LaunchConfiguration("controllers_config"),
         replacements={
             "<prefix>": prefix,
             "<suffix>": suffix,
@@ -126,6 +126,7 @@ def launch_setup(context, *args, **kwargs):
                     "namespace": LaunchConfiguration("namespace"),
                     "config_path": controllers_params,
                 }.items(),
+                condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
             ),
             # Emergency Stop
             Node(
@@ -179,9 +180,8 @@ def generate_launch_description():
             description="Whether the dynaarm is started as a subcomponent",
         ),
         DeclareLaunchArgument(
-            "ros2_control_params_arm",
-            default_value=get_package_share_directory("duatic_dynaarm_bringup")
-            + "/config/controllers.yaml",
+            "controllers_config",
+            default_value="",
             description="Path to the controllers config file",
         ),
         DeclareLaunchArgument(
