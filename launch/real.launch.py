@@ -73,20 +73,10 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Configure controller parameters
-    tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
-    if tf_prefix != "":
-        prefix = tf_prefix + "/"
-        suffix = "_" + tf_prefix
-    else:
-        prefix = ""
-        suffix = ""
-
     srdf_str = srdf_doc.toxml().replace("\n", "\\n").replace('"', '\\"')
     controllers_params = ReplaceString(
         source_file=LaunchConfiguration("controllers_config"),
         replacements={
-            "<prefix>": prefix,
-            "<suffix>": suffix,
             "<srdf>": f'"{srdf_str}"',
         },
     )

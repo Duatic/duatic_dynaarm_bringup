@@ -36,8 +36,6 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node, PushRosNamespace, SetParameter
 
-from duatic_common.launch import ReplaceString
-
 from duatic_helpers import simulator_not_subcomponent_condition
 
 
@@ -68,20 +66,6 @@ def launch_setup(context, *args, **kwargs):
             "version": LaunchConfiguration("version").perform(context),
             "tf_prefix": tf_prefix + "/" if tf_prefix else "",
         },
-    )
-
-    # Process controllers_config file
-    tf_prefix = LaunchConfiguration("tf_prefix").perform(context)
-    if tf_prefix != "":
-        prefix = tf_prefix + "/"
-        suffix = "_" + tf_prefix
-    else:
-        prefix = ""
-        suffix = ""
-
-    controllers_params = ReplaceString(
-        source_file=LaunchConfiguration("controllers_config"),
-        replacements={"<prefix>": prefix, "<suffix>": suffix},
     )
 
     group_action = GroupAction(
@@ -136,7 +120,7 @@ def launch_setup(context, *args, **kwargs):
                 ),
                 launch_arguments={
                     "namespace": LaunchConfiguration("namespace"),
-                    "config_path": controllers_params,
+                    "config_path": LaunchConfiguration("controllers_config"),
                 }.items(),
                 condition=UnlessCondition(LaunchConfiguration("start_as_subcomponent")),
             ),
